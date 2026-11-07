@@ -1,0 +1,114 @@
+title,fraudulent,predicted,score,error_type
+Data Entry,0,1,0.9857555562008616,false alarm
+Commissioned Sales Rep - Nationwide,0,1,0.9138321419674166,false alarm
+Teaching Assistant,0,1,0.8587597972585795,false alarm
+Data Entry ($18/hr),0,1,0.8236653613561965,false alarm
+"Assistant Chief Nursing Officer (hospital west of Montgomery, AL)",0,1,0.6156878604209244,false alarm
+Data Entry/Customer Service Rep,0,1,0.5215315901911797,false alarm
+Dental Receptionist / Dental Office Manager,0,1,0.503207751333515,false alarm
+(Willing to train) Life Insurance Agent,0,1,0.47447238306607586,false alarm
+Operating Room RN ,0,1,0.40684040726594894,false alarm
+Medication Order Clerk,0,1,0.4023680732081214,false alarm
+Bookkeeper/Office Manager,0,1,0.39158058192513656,false alarm
+Book Keeper,0,1,0.3856797063348403,false alarm
+Customer Service/ $18hr,0,1,0.3654979735339355,false alarm
+Insurance Agent - Life ,0,1,0.34598737019769055,false alarm
+Revenue Services Specialist,0,1,0.33853757063637996,false alarm
+Sales Assistant - SAACHI,0,1,0.32423710146792367,false alarm
+Order Admin/ $15hr,0,1,0.30257726821923336,false alarm
+Workers Compensation Attorney,0,1,0.300759843641132,false alarm
+Territory Sales Representatives (Residential FiOS),0,1,0.2879039747937548,false alarm
+BIOMEDICAL EQUIPMENT TECHNICAN,0,1,0.2873713775943384,false alarm
+"Chief Executive Officer, CEO, hospital",0,1,0.281531288271979,false alarm
+Catering Assistant,0,1,0.27121331546223454,false alarm
+Oil/Gas Technical Manager,1,0,0.2623484452890392,missed fraud
+Subsea Controls Engineer ,1,0,0.25916896934507766,missed fraud
+Administrative Assitstant,1,0,0.2268322340310057,missed fraud
+QA Engineer,1,0,0.22190463404062988,missed fraud
+Subsea Pipeline Engineer,1,0,0.2217964308316387,missed fraud
+Project Manager: Mechanical,1,0,0.21102069603742604,missed fraud
+Process Engineer Mechanical,1,0,0.21079182296040458,missed fraud
+Project Manager: Engineer,1,0,0.20911508683210026,missed fraud
+Project Controls Technician,1,0,0.20682785363779183,missed fraud
+Project Engineer,1,0,0.2061884097304374,missed fraud
+Director of Engineering,1,0,0.2020152942961309,missed fraud
+Senior System Engineering Manager ,1,0,0.18309318477711542,missed fraud
+Accounting Clerk($20/hr),1,0,0.17904941821231962,missed fraud
+Administrative Assistant,1,0,0.17796847678888658,missed fraud
+Health + Safety Professional,1,0,0.16880860644995466,missed fraud
+Product Development Engineer PLC,1,0,0.16684325379251413,missed fraud
+CUSTOMER SERVICE AGENT ,1,0,0.15375605480403812,missed fraud
+CUSTOMER SERVICE AGENT ,1,0,0.1516930665866829,missed fraud
+Administrative Manager,1,0,0.1461466797532245,missed fraud
+Administrative Assistant ,1,0,0.14199724486086324,missed fraud
+Director of Engineering: Applications,1,0,0.14112220666870487,missed fraud
+Health + Environmental Professional,1,0,0.13714699886175116,missed fraud
+Technical Program Manager,1,0,0.1353756696993653,missed fraud
+Office Manager,1,0,0.1266893244211784,missed fraud
+Software Architect ,1,0,0.1237679599372158,missed fraud
+Customer Service Representative,1,0,0.11584772063154088,missed fraud
+Graphite Expert (Remote Position),1,0,0.1156528356189336,missed fraud
+IC&E Technician Mt Poso,1,0,0.11451844644408793,missed fraud
+COMPANY REPRESENTATIVE NEEDED,1,0,0.10396023630472226,missed fraud
+Process Safety Engineer,1,0,0.09785688093236332,missed fraud
+Project Controls Tech,1,0,0.09588895696822682,missed fraud
+Sr. Systems Engineering Manager,1,0,0.08950232676521368,missed fraud
+Process Engineer,1,0,0.08787547048547108,missed fraud
+Plant Operator,1,0,0.08141514289049809,missed fraud
+Information Security Manager,1,0,0.0790135227863257,missed fraud
+ Hiring for Business Intelligence and Analytics Project Manager,1,0,0.07625315335102542,missed fraud
+UTC Lead Testing Technician,1,0,0.06861526757225424,missed fraud
+IC&E Technician,1,0,0.06709993470775755,missed fraud
+Senior Geologist,1,0,0.06638576051572508,missed fraud
+Director of Strategy,1,0,0.06465921310128,missed fraud
+UST Testing Technician II ,1,0,0.0547921267090035,missed fraud
+UST Testing Technician III,1,0,0.051103747135777616,missed fraud
+"LEAN Program Manager, Carol Stream, IL",1,0,0.04981040180951318,missed fraud
+Customer Success District Manager,1,0,0.04651315179376544,missed fraud
+Production Supervisor,1,0,0.0457319412551584,missed fraud
+HES Manager,1,0,0.04446628270116791,missed fraud
+ Sr. Process Engineer,1,0,0.044089504788845255,missed fraud
+Product Insight Analyst Property and Casualty Insurance   2168,1,0,0.04161469436036139,missed fraud
+Director of Product Marketing for Advertisers ,1,0,0.04088152941896581,missed fraud
+UST Testing Technician,1,0,0.03234852980390908,missed fraud
+Software Engineer | Forecasting & Optimization,1,0,0.03168507264257166,missed fraud
+Intern Development Assistant,1,0,0.03161996977040802,missed fraud
+User Experience Designer | Mobile,1,0,0.03083921210808699,missed fraud
+Sales Engineer/Platform Support,1,0,0.0287452250590888,missed fraud
+Recruitment & Talent Acquisition Professional,1,0,0.024792995488538697,missed fraud
+Director of Product Management,1,0,0.0223637282793102,missed fraud
+Financing Auto(car) sales,1,0,0.021413028513565052,missed fraud
+Research Engineer Data Science,1,0,0.02095217627929584,missed fraud
+SEO Analysis,1,0,0.01886474689254006,missed fraud
+Real Services,1,0,0.017342562845456565,missed fraud
+Dispatcher,1,0,0.017061921260843937,missed fraud
+Accounts Receivable Specialist,1,0,0.016064242931464492,missed fraud
+"Compensation Consultant, Toronto, ON, Canada",1,0,0.013254403241148875,missed fraud
+Process Validation Project Manager ,1,0,0.012340683797486344,missed fraud
+QA Compliance Specialist ,1,0,0.011616474869056594,missed fraud
+"Account Sales Managers $80-$130,000/yr",1,0,0.01075718493799825,missed fraud
+Quality Engineer ,1,0,0.009836458535074184,missed fraud
+Senior Software Engineer QA Automation,1,0,0.009633305599044826,missed fraud
+Informatica/ Etl Tester,1,0,0.009452727821185435,missed fraud
+Production Assistant,1,0,0.009439146071147481,missed fraud
+Design Generalist,1,0,0.00863075442037167,missed fraud
+Document Control Specialist,1,0,0.008265404846974753,missed fraud
+Technology Consultant - Outside Sales  ,1,0,0.007439482846426714,missed fraud
+"Account Manager $80-$130,000/yr",1,0,0.0071620306815391305,missed fraud
+"Agency Sales Managers $150-$175,000/yr",1,0,0.0069405176092768904,missed fraud
+"Account Sales Managers $80-$130,000/yr",1,0,0.006671832952162944,missed fraud
+"Agency Sales Managers $150-$175,000/yr",1,0,0.006669920255648998,missed fraud
+Urgent position for SQL BI Tester,1,0,0.0061764027019069415,missed fraud
+Senior QA Engineer ,1,0,0.0060797169949351115,missed fraud
+"Agency Sales Managers $150-$175,000/yr",1,0,0.00559419915510664,missed fraud
+"Quality Specialist II, Clinical Programming",1,0,0.004970704883662409,missed fraud
+Director of Software Engineering,1,0,0.004830958417810838,missed fraud
+Director of Technical Operations,1,0,0.0046667287854744366,missed fraud
+ Data Entry Representative,1,0,0.004241553903672849,missed fraud
+Appointment setter,1,0,0.0028946058152756345,missed fraud
+Communications Manager ,1,0,0.002818750449139541,missed fraud
+Lead Software Engineer - Web,1,0,0.002579919846430662,missed fraud
+Lead Software Engineer - Web,1,0,0.002579919846430662,missed fraud
+Senior JavaScript Developer,1,0,0.0019286637755345237,missed fraud
+Client Service Manager,1,0,0.0013263349954729224,missed fraud
+Front-End/JavaScript Engineer,1,0,0.0005467549295156505,missed fraud

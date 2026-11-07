@@ -2,7 +2,7 @@
 """Standalone TF-IDF + logistic regression training and testing.
 
 Install: python -m pip install numpy pandas scikit-learn matplotlib joblib
-Run: python Job_Fraud_TFIDF_Colab.py --csv fake_job_postings.csv
+Run: python model-testing1.py   (add --target-precision 0.7, --quick, --no-show as needed)
 
 Outputs go to ./job_fraud_results (override with --output).
 No Colab, IPython, or pre-existing variables are needed.
@@ -23,6 +23,13 @@ def main():
     parser.add_argument('--output', type=Path, default=Path('job_fraud_results'))
     parser.add_argument('--quick', action='store_true',
                         help='Skip subset refits; learning graphs contain only the full-data point.')
+    parser.add_argument('--target-precision', type=float, default=0.60,
+                        help='Minimum share of alerts that should be fraud. Lower it to catch more '
+                             'fraud at the cost of more false alarms (e.g. 0.50).')
+    parser.add_argument('--c-grid', type=float, nargs='+', default=[1, 3, 10, 30, 100],
+                        help='Logistic-regression C values tried in grouped cross-validation.')
+    parser.add_argument('--no-show', action='store_true',
+                        help='Save graphs without opening them when the run finishes.')
     args = parser.parse_args()
     if not args.csv.is_file():
         parser.error(f'Dataset not found: {args.csv}. Supply --csv /path/to/fake_job_postings.csv')
@@ -38,7 +45,8 @@ def main():
     from sklearn.pipeline import Pipeline
     from sklearn.feature_extraction.text import TfidfVectorizer
     from sklearn.linear_model import LogisticRegression
-    from sklearn.model_selection import GroupShuffleSplit
+    from sklearn.model_selection import GroupShuffleSplit, StratifiedGroupKFold, cross_val_predict
+    from sklearn.base import clone
     from sklearn.metrics import (classification_report, confusion_matrix,
         ConfusionMatrixDisplay, precision_recall_curve, average_precision_score,
         PrecisionRecallDisplay, precision_score, recall_score, f1_score)
@@ -119,32 +127,53 @@ def main():
 
 
 
-    model = Pipeline([
+    base_model = Pipeline([
         ('tfidf', TfidfVectorizer(ngram_range=(1, 2), min_df=2,
              max_df=0.98, max_features=50000, sublinear_tf=True, dtype=np.float64)),
         ('classifier', LogisticRegression(class_weight='balanced', C=1.0,
              solver='liblinear', max_iter=2000, random_state=SEED))
     ])
+
+    # Tune C and collect out-of-fold scores with company-grouped CV over train+validation.
+    # Each fold's model never sees postings from the companies it is scored on, so the
+    # out-of-fold scores mimic "new employer" conditions with ~5x more fraud examples
+    # than the validation split alone. The test split is not touched here.
+    cv = StratifiedGroupKFold(n_splits=5, shuffle=True, random_state=SEED)
+    cv_rows, oof_by_c = [], {}
+    for c_value in args.c_grid:
+        candidate = clone(base_model).set_params(classifier__C=c_value)
+        oof = cross_val_predict(candidate, trainval['text'], trainval['fraudulent'],
+                                groups=trainval['group'], cv=cv, method='predict_proba')[:, 1]
+        oof_by_c[c_value] = oof
+        cv_rows.append({'C': c_value,
+                        'OOF average precision': average_precision_score(trainval['fraudulent'], oof)})
+        print(f'CV C={c_value:g}: out-of-fold average precision {cv_rows[-1]["OOF average precision"]:.4f}')
+    cv_table = pd.DataFrame(cv_rows)
+    best_c = float(cv_table.loc[cv_table['OOF average precision'].idxmax(), 'C'])
+    print(f'Selected C={best_c:g}')
+
+    model = clone(base_model).set_params(classifier__C=best_c)
     model.fit(train['text'], train['fraudulent'])
     print('Training complete. Vocabulary size:', len(model['tfidf'].vocabulary_))
 
 
 
-    TARGET_PRECISION = 0.80
-    val_scores = model.predict_proba(val['text'])[:, 1]
-    p, r, thresholds = precision_recall_curve(val['fraudulent'], val_scores)
+    TARGET_PRECISION = args.target_precision
+    oof_scores = oof_by_c[best_c]
+    p, r, thresholds = precision_recall_curve(trainval['fraudulent'], oof_scores)
     p, r = p[:-1], r[:-1]
     f1 = 2 * p * r / np.maximum(p + r, 1e-12)
     valid = np.flatnonzero(p >= TARGET_PRECISION)
     if len(valid):
         chosen = valid[np.argmax(r[valid])]
-        selection_note = 'Highest validation recall meeting the precision target'
+        selection_note = 'Highest out-of-fold recall meeting the precision target'
     else:
         chosen = int(np.argmax(f1))
-        selection_note = 'Precision target unmet; fallback to best validation F1'
+        selection_note = 'Precision target unmet; fallback to best out-of-fold F1'
     threshold = float(thresholds[chosen])
-    print(selection_note)
-    print(f'Threshold: {threshold:.4f}; precision: {p[chosen]:.3f}; recall: {r[chosen]:.3f}')
+    print(selection_note, f'(target precision {TARGET_PRECISION:.2f})')
+    print(f'Threshold: {threshold:.4f}; OOF precision: {p[chosen]:.3f}; OOF recall: {r[chosen]:.3f}')
+    val_scores = model.predict_proba(val['text'])[:, 1]
     print('Validation alerts:', int((val_scores >= threshold).sum()))
 
 
@@ -218,14 +247,14 @@ def main():
     joblib.dump(bundle, args.output / 'job_fraud_baseline.joblib')
     (args.output / 'evaluation.json').write_text(json.dumps({
         'test_metrics': metrics, 'threshold': threshold,
-        'threshold_selection': selection_note, 'sklearn_version': sklearn.__version__,
+        'threshold_selection': selection_note, 'target_precision': TARGET_PRECISION,
+        'selected_C': best_c, 'cv_results': cv_rows, 'sklearn_version': sklearn.__version__,
         'split_sizes': {'train': len(train), 'validation': len(val), 'test': len(test)}
     }, indent=2))
     restored = joblib.load(args.output / 'job_fraud_baseline.joblib')
     assert np.allclose(restored['pipeline'].predict_proba(test['text'].iloc[:5]),
                        model.predict_proba(test['text'].iloc[:5]))
     print('Saved model and evaluation report.')
-    from sklearn.base import clone
     from sklearn.metrics import accuracy_score, balanced_accuracy_score, log_loss
     from sklearn.model_selection import StratifiedShuffleSplit
 
@@ -311,6 +340,49 @@ def main():
     fig.savefig(args.output / 'performance_dashboard.png', dpi=180, bbox_inches='tight')
     plt.close(fig)
 
+    # Model insights: C tuning, threshold tradeoff, and the words driving predictions.
+    fig, axes = plt.subplots(2, 2, figsize=(15, 11))
+    ax = axes[0, 0]
+    ax.plot(cv_table['C'], cv_table['OOF average precision'], marker='o', linewidth=2, color='#245c9c')
+    ax.scatter([best_c], [cv_table['OOF average precision'].max()], s=90, color='#d57622',
+               zorder=5, label=f'Selected C={best_c:g}')
+    ax.set_xscale('log')
+    ax.set(xlabel='C (higher = less regularization)', ylabel='Out-of-fold average precision',
+           title='Grouped 5-fold CV: choosing C')
+    ax.legend()
+
+    ax = axes[0, 1]
+    ax.plot(thresholds, p, label='Precision', color='#245c9c', linewidth=2)
+    ax.plot(thresholds, r, label='Recall (fraud caught)', color='#d57622', linewidth=2)
+    ax.plot(thresholds, f1, label='F1', color='#3a8a4f', linewidth=1.5, linestyle='--')
+    ax.axvline(threshold, color='black', linestyle='--', label=f'Chosen threshold {threshold:.3f}')
+    ax.axhline(TARGET_PRECISION, color='gray', linestyle=':', label=f'Target precision {TARGET_PRECISION:.2f}')
+    ax.set(xlabel='Alert threshold', ylabel='Score', xlim=(0, 1), ylim=(0, 1.03),
+           title='Threshold tradeoff (out-of-fold, train+validation)')
+    ax.legend(fontsize=8)
+
+    names = model['tfidf'].get_feature_names_out()
+    coefs = model['classifier'].coef_[0]
+    order = np.argsort(coefs)
+    for ax, idx, color, title in [
+            (axes[1, 0], order[-20:], '#d57622', 'Top 20 terms pushing toward FRAUD'),
+            (axes[1, 1], order[:20][::-1], '#245c9c', 'Top 20 terms pushing toward LEGITIMATE')]:
+        ax.barh(names[idx], coefs[idx], color=color)
+        ax.set(xlabel='Logistic-regression coefficient', title=title)
+        ax.tick_params(axis='y', labelsize=9)
+        ax.grid(axis='y', visible=False)
+    fig.suptitle('Job fraud model insights', fontsize=17)
+    plt.tight_layout(rect=[0, 0, 1, 0.96])
+    fig.savefig(args.output / 'model_insights.png', dpi=180, bbox_inches='tight')
+    plt.close(fig)
+
+    # Test postings that were missed or wrongly flagged, for manual inspection.
+    errors = test.assign(score=fixed_test_scores, predicted=fixed_test_pred)
+    errors = errors.loc[errors['predicted'] != errors['fraudulent'],
+                        ['title', 'fraudulent', 'predicted', 'score']]
+    errors['error_type'] = np.where(errors['fraudulent'] == 1, 'missed fraud', 'false alarm')
+    errors.sort_values('score', ascending=False).to_csv(args.output / 'test_errors.csv', index=False)
+
     checks = {
         'No shared employer-profile groups across splits': (
             set(train.group).isdisjoint(val.group) and set(train.group).isdisjoint(test.group)
@@ -340,6 +412,22 @@ def main():
     learning.to_csv(args.output / 'learning_curves.csv', index=False)
     (args.output / 'checks.json').write_text(json.dumps(checks, indent=2))
     print(f"\nResults saved to: {args.output.resolve()}")
+    graphs = [args.output / name for name in
+              ['performance_dashboard.png', 'model_insights.png', 'test_evaluation.png']]
+    print('Graphs:\n  ' + '\n  '.join(str(g.resolve()) for g in graphs))
+    print('Misclassified test postings: ' + str((args.output / 'test_errors.csv').resolve()))
+    if not args.no_show:
+        import subprocess, sys, os
+        for graph in graphs:
+            try:
+                if sys.platform == 'darwin':
+                    subprocess.run(['open', str(graph)], check=False)
+                elif sys.platform.startswith('win'):
+                    os.startfile(str(graph))
+                else:
+                    subprocess.run(['xdg-open', str(graph)], check=False)
+            except OSError as error:
+                print(f'Could not open {graph}: {error}')
 
 
 if __name__ == '__main__':
