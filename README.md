@@ -30,6 +30,17 @@ Run every command below from `trial-modeling-news/` with the environment active.
 | `job_fraud_results_embed/` | Embedding comparison results and saved model. |
 | `job_fraud_results_baseline/`, `job_fraud_results_v2/` | Older runs, kept for comparison. |
 
+## Datasets
+
+Both CSVs are included in this repo, so no download is needed to run the models.
+
+| File | Source | Notes |
+|---|---|---|
+| `fake_job_postings.csv` | **EMSCAD** (Employment Scam Aegean Dataset), University of the Aegean. Kaggle copy: [Real / Fake Job Posting Prediction](https://www.kaggle.com/datasets/shivamb/real-or-fake-fake-jobposting-prediction) | 17,880 real postings, 866 fraudulent, mostly US/UK, 2012–14. Paper: Vidros et al., ["Automatic Detection of Online Recruitment Frauds: Characteristics, Methods, and a Public Dataset"](https://www.mdpi.com/1999-5903/9/1/6), *Future Internet* 9(1):6, 2017. |
+| `india_synthetic_jobs.csv` | [Aioshi/smolified-fakejob](https://huggingface.co/datasets/Aioshi/smolified-fakejob) on Hugging Face, converted by `convert_hf_india.py` | 597 **AI-generated** Indian-context postings (373 fake). The metadata says Apache-2.0, but the dataset card also calls it the owner's "sovereign asset", so check with the owner before redistributing. |
+
+Check each source's license before using the data outside this project.
+
 ## Common commands
 
 ```bash
