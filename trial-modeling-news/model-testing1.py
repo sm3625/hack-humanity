@@ -28,6 +28,17 @@ def main():
                              'fraud at the cost of more false alarms (e.g. 0.50).')
     parser.add_argument('--c-grid', type=float, nargs='+', default=[1, 3, 10, 30, 100],
                         help='Logistic-regression C values tried in grouped cross-validation.')
+    parser.add_argument('--extra-csv', type=Path,
+                        default=Path(__file__).resolve().parent / 'india_synthetic_jobs.csv',
+                        help='Extra labeled postings (same columns) mixed into training; 20%% are held out '
+                             'for evaluation. Create it with convert_hf_india.py.')
+    parser.add_argument('--extra-weight', type=float, default=5.0,
+                        help='Sample weight for each extra-data training row.')
+    parser.add_argument('--no-extra', action='store_true', help='Train on the main CSV only.')
+    parser.add_argument('--no-desc-aug', action='store_true',
+                        help='Do not add description-only copies of training postings.')
+    parser.add_argument('--no-rules', action='store_true',
+                        help='Use only the model score, without the scam red-flag rules in scam_rules.py.')
     parser.add_argument('--no-show', action='store_true',
                         help='Save graphs without opening them when the run finishes.')
     args = parser.parse_args()
@@ -125,6 +136,23 @@ def main():
     assert set(train.group).isdisjoint(test.group)
     assert set(val.group).isdisjoint(test.group)
 
+    # Extra labeled data (e.g. Indian postings): 80% joins training, 20% is held out.
+    extra_train = extra_test = None
+    if not args.no_extra and args.extra_csv.is_file():
+        from sklearn.model_selection import train_test_split
+        extra = pd.read_csv(args.extra_csv)
+        extra['fraudulent'] = pd.to_numeric(extra['fraudulent'], errors='coerce')
+        extra = extra.dropna(subset=['fraudulent']).astype({'fraudulent': int})
+        extra['text'] = combine_fields(extra)
+        extra = extra.loc[(extra['text'].str.len() > 0) & ~extra['text'].isin(df['text'])]
+        extra = extra.drop_duplicates('text').reset_index(drop=True)
+        extra_train, extra_test = train_test_split(extra, test_size=0.20, random_state=SEED,
+                                                   stratify=extra['fraudulent'])
+        print(f'Extra data {args.extra_csv.name}: {len(extra_train)} training rows '
+              f'(weight {args.extra_weight:g}), {len(extra_test)} held out')
+    elif not args.no_extra:
+        print(f'No extra data at {args.extra_csv}; training on the main CSV only.')
+
 
 
     base_model = Pipeline([
@@ -152,9 +180,23 @@ def main():
     best_c = float(cv_table.loc[cv_table['OOF average precision'].idxmax(), 'C'])
     print(f'Selected C={best_c:g}')
 
+    # Final training set: the main training split, plus description-only copies of it (so the
+    # model also learns from short postings that lack company/requirements/benefits fields,
+    # like most Indian ads), plus the extra data's training rows at a higher weight.
+    fit_parts = [(train['text'], train['fraudulent'], 1.0)]
+    if not args.no_desc_aug:
+        desc_only = combine_fields(train[['description']])
+        keep = desc_only.str.len() > 0
+        fit_parts.append((desc_only[keep], train.loc[keep, 'fraudulent'], 1.0))
+    if extra_train is not None:
+        fit_parts.append((extra_train['text'], extra_train['fraudulent'], args.extra_weight))
+    fit_text = pd.concat([part[0] for part in fit_parts], ignore_index=True)
+    fit_labels = pd.concat([part[1] for part in fit_parts], ignore_index=True)
+    fit_weights = np.concatenate([np.full(len(part[0]), part[2]) for part in fit_parts])
     model = clone(base_model).set_params(classifier__C=best_c)
-    model.fit(train['text'], train['fraudulent'])
-    print('Training complete. Vocabulary size:', len(model['tfidf'].vocabulary_))
+    model.fit(fit_text, fit_labels, classifier__sample_weight=fit_weights)
+    print(f'Training complete on {len(fit_text):,} rows. Vocabulary size:',
+          len(model['tfidf'].vocabulary_))
 
 
 
@@ -178,8 +220,25 @@ def main():
 
 
 
+    from scam_rules import scam_flags, any_flag
+    USE_RULES = not args.no_rules
+
+    def alert(texts, scores):
+        """Alert when the model score passes the threshold or, with rules on, any red-flag rule fires."""
+        model_alert = (np.asarray(scores) >= threshold).astype(int)
+        if not USE_RULES:
+            return model_alert
+        return np.maximum(model_alert, np.asarray(any_flag(texts), dtype=int))
+
     test_scores = model.predict_proba(test['text'])[:, 1]
-    test_pred = (test_scores >= threshold).astype(int)
+    test_pred = alert(test['text'], test_scores)
+    if USE_RULES:
+        model_only = (test_scores >= threshold).astype(int)
+        rule_only = np.asarray(any_flag(test['text']))
+        added = (test_pred == 1) & (model_only == 0)
+        print(f"Red-flag rules fired on {rule_only.sum()} test postings; they added "
+              f"{int((added & (test['fraudulent'] == 1)).sum())} caught frauds and "
+              f"{int((added & (test['fraudulent'] == 0)).sum())} false alarms beyond the model.")
     print('Always-legitimate accuracy:', round(1 - test['fraudulent'].mean(), 3))
     print(classification_report(test['fraudulent'], test_pred, labels=[0, 1],
           target_names=['legitimate', 'fraudulent'], digits=3, zero_division=0))
@@ -191,6 +250,23 @@ def main():
         'test_rows': len(test), 'test_fraud_rows': int(test['fraudulent'].sum())
     }
     print('Average precision:', round(metrics['average_precision'], 3))
+
+    extra_metrics = None
+    if extra_test is not None:
+        from sklearn.metrics import accuracy_score as _acc
+        ex_scores = model.predict_proba(extra_test['text'])[:, 1]
+        ex_pred = alert(extra_test['text'], ex_scores)
+        ex_y = extra_test['fraudulent']
+        extra_metrics = {
+            'rows': len(extra_test), 'fraud_rows': int(ex_y.sum()),
+            'accuracy': float(_acc(ex_y, ex_pred)),
+            'precision': float(precision_score(ex_y, ex_pred, zero_division=0)),
+            'recall': float(recall_score(ex_y, ex_pred, zero_division=0)),
+            'f1': float(f1_score(ex_y, ex_pred, zero_division=0)),
+        }
+        print(f'\nHELD-OUT EXTRA DATA ({args.extra_csv.name}, never trained on)')
+        print(classification_report(ex_y, ex_pred, labels=[0, 1], target_names=['legitimate', 'fraudulent'],
+                                    digits=3, zero_division=0))
     fig, axes = plt.subplots(1, 2, figsize=(11, 4))
     ConfusionMatrixDisplay(confusion_matrix(test['fraudulent'], test_pred, labels=[0, 1]),
         display_labels=['legitimate', 'fraudulent']).plot(ax=axes[0], colorbar=False)
@@ -208,10 +284,13 @@ def main():
         if not text or vector.nnz == 0:
             return {'status': 'Insufficient information', 'model_score': None}
         score = float(fitted_model['classifier'].predict_proba(vector)[0, 1])
+        flags = scam_flags(text) if USE_RULES else []
         return {
-            'status': 'Review recommended' if score >= alert_threshold else 'Below review threshold',
+            'status': ('Review recommended' if score >= alert_threshold or flags
+                       else 'Below review threshold'),
             'model_score': round(score, 4),
             'threshold': round(float(alert_threshold), 4),
+            'scam_flags': flags,
             'note': 'Uncalibrated model score; not a fraud probability or a safety guarantee.'
         }
 
@@ -242,12 +321,21 @@ def main():
         'pipeline': model, 'threshold': threshold, 'text_columns': TEXT_COLUMNS,
         'sklearn_version': sklearn.__version__, 'seed': SEED,
         'scope': 'General recruitment-fraud benchmark; not a troll-farm detector',
-        'preprocessing': 'Reuse clean_text and combine_fields from this notebook'
+        'preprocessing': 'Reuse clean_text and combine_fields from this notebook',
+        'use_rules': USE_RULES,
+        'rules': 'Alert if score >= threshold OR scam_rules.scam_flags(text) is non-empty',
+        'extra_csv': None if extra_train is None else str(args.extra_csv),
+        'extra_train_ids': [] if extra_train is None else extra_train['job_id'].astype(str).tolist(),
+        'extra_test_ids': [] if extra_test is None else extra_test['job_id'].astype(str).tolist(),
+        'desc_augmentation': not args.no_desc_aug
     }
     joblib.dump(bundle, args.output / 'job_fraud_baseline.joblib')
     (args.output / 'evaluation.json').write_text(json.dumps({
         'test_metrics': metrics, 'threshold': threshold,
         'threshold_selection': selection_note, 'target_precision': TARGET_PRECISION,
+        'use_rules': USE_RULES, 'extra_heldout_metrics': extra_metrics,
+        'extra_weight': None if extra_train is None else args.extra_weight,
+        'desc_augmentation': not args.no_desc_aug,
         'selected_C': best_c, 'cv_results': cv_rows, 'sklearn_version': sklearn.__version__,
         'split_sizes': {'train': len(train), 'validation': len(val), 'test': len(test)}
     }, indent=2))
@@ -261,7 +349,7 @@ def main():
     summary_rows = []
     for split_name, part in [('Train', train), ('Validation', val), ('Test', test)]:
         scores = model.predict_proba(part['text'])[:, 1]
-        predictions = (scores >= threshold).astype(int)
+        predictions = alert(part['text'], scores)
         summary_rows.append({
             'Split': split_name, 'Rows': len(part), 'Fraud examples': int(part.fraudulent.sum()),
             'Accuracy': accuracy_score(part.fraudulent, predictions),
@@ -316,7 +404,7 @@ def main():
     axes[0, 2].axhline(0.5, linestyle=':', color='gray')
 
     fixed_test_scores = model.predict_proba(test['text'])[:, 1]
-    fixed_test_pred = (fixed_test_scores >= threshold).astype(int)
+    fixed_test_pred = alert(test['text'], fixed_test_scores)
     cm = confusion_matrix(test.fraudulent, fixed_test_pred, labels=[0, 1])
     ConfusionMatrixDisplay(cm, display_labels=['Legitimate', 'Fraud']).plot(
         ax=axes[1, 0], cmap='Blues', colorbar=False)
