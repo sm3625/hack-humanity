@@ -1,0 +1,117 @@
+{
+  "selected_model": "tfidf",
+  "thresholds": {
+    "tfidf": {
+      "US": 0.19993882972621344,
+      "IN": 0.3221792163934057
+    },
+    "embed": {
+      "US": 0.9808791331680644,
+      "IN": 0.7930774758047096
+    },
+    "hybrid": {
+      "US": 0.35905939303617923,
+      "IN": 0.666134149220161
+    }
+  },
+  "cv": [
+    {
+      "model": "tfidf",
+      "US OOF avg precision": 0.6965657748214794,
+      "India OOF avg precision": 0.9814325205160783,
+      "US threshold": 0.19993882972621344,
+      "India threshold": 0.3221792163934057,
+      "mean OOF avg precision": 0.8389991476687788
+    },
+    {
+      "model": "embed",
+      "US OOF avg precision": 0.31834156658540624,
+      "India OOF avg precision": 0.9518389418713158,
+      "US threshold": 0.9808791331680644,
+      "India threshold": 0.7930774758047096,
+      "mean OOF avg precision": 0.635090254228361
+    },
+    {
+      "model": "hybrid",
+      "US OOF avg precision": 0.671580430517057,
+      "India OOF avg precision": 0.9817794953341776,
+      "US threshold": 0.35905939303617923,
+      "India threshold": 0.666134149220161,
+      "mean OOF avg precision": 0.8266799629256173
+    }
+  ],
+  "held_out": [
+    {
+      "model": "tfidf",
+      "thresholds": "shared",
+      "US acc": 0.9657640834111423,
+      "US precision": 0.849624060150376,
+      "US recall": 0.5566502463054187,
+      "US false alarms": 20,
+      "India acc": 0.9083333333333333,
+      "India precision": 0.8809523809523809,
+      "India recall": 0.9866666666666667,
+      "India false alarms": 10
+    },
+    {
+      "model": "tfidf",
+      "thresholds": "per-region",
+      "US acc": 0.9657640834111423,
+      "US precision": 0.849624060150376,
+      "US recall": 0.5566502463054187,
+      "US false alarms": 20,
+      "India acc": 0.925,
+      "India precision": 0.9125,
+      "India recall": 0.9733333333333334,
+      "India false alarms": 7
+    },
+    {
+      "model": "embed",
+      "thresholds": "shared",
+      "US acc": 0.9368191721132898,
+      "US precision": 0.5,
+      "US recall": 0.059113300492610835,
+      "US false alarms": 12,
+      "India acc": 0.825,
+      "India precision": 1.0,
+      "India recall": 0.72,
+      "India false alarms": 0
+    },
+    {
+      "model": "embed",
+      "thresholds": "per-region",
+      "US acc": 0.9365079365079365,
+      "US precision": 0.48148148148148145,
+      "US recall": 0.06403940886699508,
+      "US false alarms": 14,
+      "India acc": 0.8916666666666667,
+      "India precision": 0.9078947368421053,
+      "India recall": 0.92,
+      "India false alarms": 7
+    },
+    {
+      "model": "hybrid",
+      "thresholds": "shared",
+      "US acc": 0.966697790227202,
+      "US precision": 0.8636363636363636,
+      "US recall": 0.5615763546798029,
+      "US false alarms": 18,
+      "India acc": 0.925,
+      "India precision": 0.9024390243902439,
+      "India recall": 0.9866666666666667,
+      "India false alarms": 8
+    },
+    {
+      "model": "hybrid",
+      "thresholds": "per-region",
+      "US acc": 0.9663865546218487,
+      "US precision": 0.8625954198473282,
+      "US recall": 0.5566502463054187,
+      "US false alarms": 18,
+      "India acc": 0.9416666666666667,
+      "India precision": 0.9594594594594594,
+      "India recall": 0.9466666666666667,
+      "India false alarms": 3
+    }
+  ]
+}
