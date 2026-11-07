@@ -1,0 +1,8 @@
+{
+  "No shared employer-profile groups across splits": true,
+  "No exact duplicate text across splits": true,
+  "Both label classes present in every split": true,
+  "Finite scores in [0, 1]": true,
+  "Blank input returns insufficient information": true,
+  "Save/reload preserves scores": true
+}

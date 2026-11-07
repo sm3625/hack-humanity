@@ -1,0 +1,18 @@
+{
+  "test_metrics": {
+    "precision": 0.8623853211009175,
+    "recall": 0.4630541871921182,
+    "f1": 0.6025641025641025,
+    "average_precision": 0.7181399373039625,
+    "test_rows": 3213,
+    "test_fraud_rows": 203
+  },
+  "threshold": 0.5913286615380273,
+  "threshold_selection": "Highest validation recall meeting the precision target",
+  "sklearn_version": "1.9.1",
+  "split_sizes": {
+    "train": 10237,
+    "validation": 2422,
+    "test": 3213
+  }
+}
